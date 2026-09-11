@@ -1,12 +1,10 @@
-# lan-share
-Stream your Mac screen, windows, system audio and local videos to iPhone, Android or any modern browser over your local network. No mobile app, no cloud, no account. Just run it, scan the QR code and start watching.
-
-<img width="1620" height="979" alt="image" src="https://github.com/user-attachments/assets/4cc25f29-473d-4c7a-8033-9858aa67b8d8" />
-
-
 # LAN Share
 
 **Stream your Mac screen, windows, audio and local videos to iPhone, Android or any browser over your local network.**
+
+<img width="1620" height="979" alt="image" src="https://github.com/user-attachments/assets/4cc25f29-473d-4c7a-8033-9858aa67b8d8" />
+<img width="1619" height="983" alt="image" src="https://github.com/user-attachments/assets/cac36dbe-5dbf-428d-8754-f464eda01133" />
+
 
 LAN Share is a lightweight macOS utility for one surprisingly simple problem: sometimes you just want to leave your Mac where it is and continue watching or monitoring something from your phone.
 
