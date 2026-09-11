@@ -1,237 +1,111 @@
-# LAN Share
+# Экран рядом — локальный MVP для macOS
 
-**Stream your Mac screen, windows, audio and local videos to iPhone, Android or any browser over your local network.**
+Python + ScreenCaptureKit → H.264 + Opus / WebRTC → Safari на iPhone. Без .app, облака, STUN/TURN и установки приложения на телефон. Интерфейс и зависимости после установки работают без интернета.
 
-<img width="1620" height="979" alt="image" src="https://github.com/user-attachments/assets/4cc25f29-473d-4c7a-8033-9858aa67b8d8" />
-<img width="1619" height="983" alt="image" src="https://github.com/user-attachments/assets/cac36dbe-5dbf-428d-8754-f464eda01133" />
+**Окно/экран передаётся со звуком. Для окна захватывается звук его приложения (включая другие окна этого приложения); для экрана — системный звук. Микрофон не захватывается. Видео из файла воспроизводится со звуком и перемоткой, если его кодеки поддерживает Safari.** Это прототип просмотра, без управления мышью, DRM-обхода и автоматического перекодирования файлов.
 
+## Запуск
 
-LAN Share is a lightweight macOS utility for one surprisingly simple problem: sometimes you just want to leave your Mac where it is and continue watching or monitoring something from your phone.
+Требуется macOS 14+ и Python 3.11–3.14. Зависимости установлены и проверены здесь на macOS 15.7.9 / Apple Silicon / Python 3.14.7. Swift, Xcode и ffmpeg для запуска не нужны.
 
-Apple provides plenty of ways to move content *to* a Mac, use an iPad as an external display, or mirror an iPhone elsewhere, but there is still no simple built-in way to stream an arbitrary Mac window or the entire Mac screen directly to Safari on an iPhone, let alone to an Android device.
-
-LAN Share fills that gap.
-
-Run one command on your Mac, scan the QR code from your phone, and open the stream in a browser.
-
-No dedicated mobile app. No account. No cloud service. No files leaving your local network.
-
-## Quick Start
-
-Clone the repository:
-
-```bash
-git clone https://github.com/danielchalamet/lan-share.git
-cd lan-share
-```
-
-Start LAN Share:
+Откройте Terminal в папке `lan-share`:
 
 ```bash
 ./run.sh
 ```
 
-On the first launch, macOS may ask for **Screen Recording** permission. Allow it for the Terminal application you are using.
-
-LAN Share will print a local address and a QR code directly in Terminal.
-
-Scan the QR code with your iPhone or Android phone, or open the displayed address manually in a browser.
-
-Your Mac and phone should be connected to the same local network.
-
-LAN Share automatically creates and manages its Python virtual environment and installs missing dependencies when necessary.
-
-To stop the server:
-
-```bash
-Ctrl+C
-```
-
-### Share a media folder
-
-You can optionally specify an initial media directory:
+С папкой сериалов:
 
 ```bash
 ./run.sh --media "$HOME/Movies"
 ```
 
-Or choose another port:
+Первый запуск устанавливает зависимости в `.venv` через PyPI. Нужен интернет. Скрипт использует `caffeinate -i`, чтобы Mac не засыпал от бездействия; крышку оставьте открытой. `Ctrl+C` завершает сервер и захват. Другой порт: `./run.sh --port 8081`.
+
+1. Откройте **полную ссылку «Управление на Mac»** из Terminal, включая часть после `#`.
+2. Нажмите **Обновить окна**. При первом обращении разрешите запись экрана в **Системные настройки → Конфиденциальность и безопасность → Запись экрана / Запись экрана и системного аудио**. Разрешение нужно Terminal, Python или приложению, из которого запущен процесс — ориентируйтесь на имя в запросе macOS. Затем закройте и заново откройте это приложение и перезапустите сервер. Ссылка сохранится.
+3. Снова нажмите **Обновить окна**, выберите нужное окно либо экран и **Начать трансляцию**.
+4. На iPhone в той же Wi-Fi сети откройте полную ссылку **«iPhone»** из Terminal в Safari и нажмите **Смотреть**. Если Safari блокирует автозапуск со звуком, нажмите **Включить звук**. При просмотре через localhost на Mac плеер изначально приглушён, чтобы избежать эха.
+5. На странице управления Mac в разделе **Медиафайлы** нажмите **Выбрать файлы на Mac**, перейдите в нужную папку, отметьте один или несколько файлов и нажмите **Добавить выбранные**. Список на iPhone обновляется каждые 5 секунд; нажмите имя файла для воспроизведения. **Убрать** исключает файл из списка, не удаляя с диска. Можно добавить файлы из разных папок без перезапуска. Этот режим работает без разрешения записи экрана; `--media` теперь лишь необязательное начальное наполнение списка.
+
+Выбирать и останавливать источник можно только через `localhost` на Mac. Телефон может смотреть включённый источник и опубликованные файлы. После смены источника зрителю нужно нажать **Смотреть** снова. **Отключиться** отключает только текущего зрителя; **Остановить всем** прекращает захват.
+
+## Постоянная ссылка и QR
+
+Terminal печатает QR со ссылкой вида `http://имя-мака.local:8080/#ключ`. Сканируйте камерой iPhone один раз и сохраните страницу в закладках. Ключ сохраняется в `.access-key`, имя `.local` не зависит от смены IP. После падения/перезапуска запустите сервер, снова выберите источник и обновите сохранённую страницу на iPhone. Сам захват после сбоя автоматически не включается.
+
+Если ваша сеть не поддерживает Bonjour/mDNS и адрес `.local` не открывается, используйте запасную ссылку по IP из Terminal. Она сохраняется при перезапусках, пока не изменился IP Mac. Изменение имени Mac, порта или удаление `.access-key` изменяет постоянную ссылку. Файл ключа не входит в ZIP.
+
+## Что внутри
+
+- `capture.py`: настоящий ScreenCaptureKit через PyObjC. `SCContentFilter` выбирает дисплей или отдельное окно. BGRA-кадр копируется из `CVPixelBuffer`; сохраняются время захвата и ограниченная история кадров.
+- `audio_capture.py`: копирование planar/interleaved PCM через CoreAudio, 48 кГц стерео, копирование PCM для Opus. Буфер хранится в общей временной шкале с видео; пропуски звука заполняются тишиной на соответствующих позициях, а не сдвигают следующий фрагмент.
+- `server.py`: aiohttp обслуживает UI, локальное управление, WebRTC offer/answer и файлы с HTTP Range/HEAD. aiortc кодирует H.264 и передаёт видео по DTLS-SRTP. Кодирование в этой версии программное, аппаратный VideoToolbox не подключён.
+- `playout.py`: общая временная шкала по исходным CMSampleBuffer PTS, буфер 150/300/500 мс, фиксированная частота отправки без добавления времени кодирования к периоду кадра; очереди ограничены.
+- `media_library.py`: выбор файлов через локальный интерфейс, непрозрачные идентификаторы для зрителя, добавление/удаление без перезапуска. Список хранится до остановки сервера.
+- `static/`: адаптивный интерфейс, Safari-клиент с `playsinline`, полноэкранным просмотром и обработкой ошибок.
+- `run.sh`: изолированное окружение и удержание Mac от сна.
+- `test_mvp.py`: проверки авторизации, ограничений файлов, перемотки и реальной передачи H.264 и ненулевого аудио Opus между двумя WebRTC endpoints на одном Mac.
+
+Предел ширины — 1280 px, частота — до 24 кадров/с, до трёх зрителей. Малую задержку обеспечивает WebRTC без сегментов HLS; конкретная задержка на Wi-Fi/iPhone **не измерена**. Копирование кадров и программный H.264 расходуют CPU. Уменьшить разрешение можно в вызове `capture.start` в `server.py`.
+
+ScreenCaptureKit выбран потому, что умеет захватывать отдельное окно независимо от его положения. ffmpeg/avfoundation удобен для целого дисплея, но не даёт здесь такого же выбора окна. HLS проще для звука/видео, но добавляет сегментную буферизацию. Swift-хелпер возможен позже, но потребовал бы SDK, которого на этом Mac нет.
+
+## Исправление падения CGS_REQUIRE_INIT
+
+В отчёте пользователя процесс падал в `SCContentFilter.initWithDesktopIndependentWindow`, внутри `SLSGetDisplaysWithRect`. Теперь перед запуском сервера и перед обращением к ScreenCaptureKit вызывается `NSApplication.sharedApplication()` в главном потоке. Это создаёт соединение с WindowServer, необходимое фильтру окна. Окно приложения или .app-пакет не создаётся; процесс остаётся терминальным скриптом.
+
+После обновления достаточно снова выполнить `./run.sh` в этой же папке; новая зависимость CoreAudio устанавливается автоматически. Обновите страницу браузера, чтобы загрузить клиент с аудио. Старый архив также заменён новой версией.
+
+## Плавность и синхронизация
+
+В разделе **Прямой эфир → Плавность** можно выбрать общий буфер звука и видео: 150, 300 (по умолчанию) или 500 мс. После изменения нажмите **Смотреть** для переподключения. Для просмотра фильма начните с 300 мс, при неровной доставке кадров попробуйте 500 мс. Это дополнительная задержка; буфер не устраняет длительные потери Wi-Fi и недостаток производительности кодировщика.
+
+Обе дорожки теперь выбирают данные по времени захвата из одной шкалы. Отправка видео не замедляется на время каждого кодирования. После долгой остановки обработки обе дорожки возвращаются к актуальному времени, без бесконечного накопления очереди. Это исправление причин рассинхрона в коде; фактическую плавность нужно оценить на телефоне.
+
+## Ограничения и неполадки
+
+- **Нет звука:** нажмите **Включить звук**, проверьте громкость iPhone и наличие звука в исходном приложении. Не проверяйте системный звук через динамики того же Mac: это может создать эхо. Если источник — окно браузера, возможен звук других его вкладок.
+- **Чёрное/замершее окно:** не сворачивайте его; откройте снова, обновите список и перезапустите трансляцию. DRM-защищённое видео может не захватываться. При закрытии источника macOS может остановить поток или оставить последний кадр.
+- **Телефон не подключается:** одинаковая локальная сеть; гостевая Wi-Fi сеть может изолировать устройства. Разрешите входящие подключения Python в брандмауэре macOS. WebRTC использует динамические UDP-порты, HTTP — указанный TCP-порт. VPN может мешать прямому соединению.
+- **Нет IP в Terminal:** проверьте IP Wi-Fi в сетевых настройках Mac и используйте его вместо `localhost`, сохранив порт и ключ. Автоматический вывод проверяет интерфейсы en0/en1.
+- **Safari не играет файл:** расширение MKV/MOV/MP4 само по себе не гарантирует совместимость кодеков. Файлы не перекодируются автоматически. Для максимальной совместимости заранее преобразуйте через установленный ffmpeg:
 
 ```bash
-./run.sh --port 8080
+ffmpeg -i "episode.mkv" -map 0:v:0 -map '0:a:0?' \
+  -c:v libx264 -preset veryfast -crf 22 -pix_fmt yuv420p \
+  -c:a aac -b:a 160k -movflags +faststart "episode-iphone.mp4"
 ```
 
-Both options can be combined:
+Оригинал не меняется; субтитры этим примером не переносятся. Добавьте преобразованный файл через выбор файлов; список на телефоне обновится автоматически.
+
+## Доступ
+
+При первом запуске создаётся случайный ключ, который сохраняется в `.access-key` (доступ только владельцу файла). После перезапуска ссылка сохраняется. Чтобы заменить ключ, остановите сервер и удалите `.access-key`; старые ссылки перестанут работать после следующего запуска. Не передавайте её посторонним. Раздаются только явно добавленные файлы и начальные медиафайлы из `--media`. Символические ссылки не добавляются. Просмотр папок и изменение списка доступны только с localhost на Mac с ключом; телефон получает названия и идентификаторы выбранных файлов, без локальных путей. HTTP-интерфейс и файлы не шифруются; используйте доверенную домашнюю сеть и не пробрасывайте порт на роутере. WebRTC-медиа шифруется. Сервер слушает все IPv4-интерфейсы, а не только Wi-Fi; ключ нужен для всех API и файлов. Внешних медиареле и аналитики нет.
+
+## Проверено и что осталось проверить
+
+Проверено на этом Mac:
+
+- тесты общего буфера с задержанным поступлением, пропусками аудио, восстановлением времени после пауз и ограничением памяти;
+- добавление, воспроизведение по HTTP и удаление файла из списка без перезапуска;
+- импорт всех зависимостей, доступность ScreenCaptureKit и запуск инициализации WindowServer без падения;
+- чтение нативного тестового `CMSampleBuffer` в массив пикселей;
+- HTTP 401 без ключа, исключение посторонних файлов и симлинков наружу;
+- HTTP 206 и HEAD для перемотки;
+- получение и декодирование H.264-кадра и ненулевого Opus-аудио через настоящий WebRTC на localhost;
+- нативные planar и interleaved PCM-буферы с разными левым/правым каналами;
+- загрузка веб-интерфейса в браузере.
+
+Пользователь подтвердил работу захвата со звуком на iPhone, но сообщил о залипании кадров и рассинхроне. После этого добавлен общий буфер и исправлена временная шкала. **Новая версия проверена автоматическими тестами, но плавность и синхронизация на физическом iPhone после этих изменений ещё требуют проверки.** Из процесса Codex захват не запускается: разрешение записи экрана привязано к Terminal пользователя.
+
+
+Запустить автоматические тесты:
 
 ```bash
-./run.sh --media "$HOME/Movies" --port 8080
+.venv/bin/python test_mvp.py
 ```
 
-Once LAN Share is running, additional media files can also be selected through the local interface without restarting the server.
+Источники архитектуры: [Apple: ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos), [Apple: захват отдельного окна](https://developer.apple.com/documentation/screencapturekit/sccontentfilter/init(desktopindependentwindow:)), [aiortc API](https://aiortc.readthedocs.io/en/stable/api.html), [PyObjC](https://pyobjc.readthedocs.io/en/latest/).
 
-## What it can do
-
-- Stream the **entire Mac display**
-- Stream an **individual application window**
-- Capture **system/application audio together with video**
-- Play **local video files** directly from your Mac
-- Add and remove media files without restarting the server
-- Open everything from **Safari, Chrome, or another modern browser**
-- Generate a **QR code directly in Terminal**
-- Use a persistent `.local` address through Bonjour/mDNS
-- Support multiple viewers on the same local network
-- Keep access protected with a persistent local access key
-- Work entirely inside your **LAN**, without uploading your screen or media to external servers
-- Interface available in **5 languages**
-
-## Why?
-
-The original use case was extremely simple:
-
-> A movie is playing on the MacBook. The Mac is charging across the room. You want to walk away with your phone and continue watching it.
-
-Opening a local video file is easy enough.
-
-But then the obvious next question appears:
-
-**Why can't I just stream a Mac window the same way I would share it during a video call?**
-
-Apple already has technologies such as AirPlay and screen mirroring, but the usual direction is toward a Mac, Apple TV, or another supported display.
-
-There is no equally simple built-in button for:
-
-**Mac → iPhone**
-
-and certainly no universal:
-
-**Mac → Android browser**
-
-LAN Share exists because that direction is useful too.
-
-It evolved from a tiny local file server into a browser-based Mac streaming utility capable of transmitting an individual window, an entire display, audio, and local media.
-
-## No mobile app required
-
-The receiving device does not need LAN Share installed.
-
-Your iPhone, Android phone, tablet, another Mac, PC, or practically any device with a modern browser can act as the viewer.
-
-The Mac does the work.
-
-The basic workflow is:
-
-1. Run `./run.sh` on the Mac.
-2. Scan the QR code.
-3. Open LAN Share on your phone.
-4. Select a window, display, or media file.
-5. Start watching.
-
-That's it.
-
-## Local by design
-
-LAN Share was built primarily for trusted home and local networks.
-
-There is:
-
-- no account
-- no cloud relay
-- no analytics service
-- no media upload
-- no external streaming server
-- no STUN/TURN dependency
-
-Your Mac captures the content and sends it directly across your local network.
-
-This also means LAN Share is primarily designed for devices connected to the same LAN/Wi-Fi network rather than internet-wide remote access.
-
-## Media sharing
-
-LAN Share can also act as a lightweight local media browser.
-
-You can select files from your Mac and make them available to connected devices without copying them to the phone first.
-
-HTTP Range support allows compatible video files to seek normally, so you can jump forward and backward instead of waiting for the entire file to download.
-
-Selected files are exposed through random internal IDs rather than revealing their real filesystem paths to the viewer.
-
-## Screen and window streaming
-
-Screen sharing is handled through Apple's native ScreenCaptureKit APIs.
-
-You can choose between:
-
-- an entire display
-- an individual macOS window
-
-Video is streamed over WebRTC using H.264, while audio is transmitted as Opus.
-
-When sharing an individual window, LAN Share captures the audio associated with its application.
-
-When sharing the whole screen, it can transmit system audio.
-
-The microphone is intentionally not part of the stream.
-
-This makes LAN Share closer to a small, private browser-based screen broadcast than a conventional remote-desktop application.
-
-## Designed for the small things
-
-LAN Share is useful when you want to:
-
-- continue a movie from your Mac on your phone
-- lie in bed while the Mac stays plugged in somewhere else
-- monitor a render, export, upload, or long-running process from another room
-- watch a Mac-only application from an iPhone or Android device
-- show a window to several devices on the same Wi-Fi
-- quickly share a local video without uploading it to Telegram, cloud storage, or another service
-- turn an old phone or tablet into a temporary secondary viewing screen
-
-LAN Share deliberately avoids becoming a full remote-desktop suite.
-
-Its purpose is simple:
-
-**get pixels, sound, and media from your Mac to a nearby browser with as little friction as possible.**
-
-## Technology
-
-LAN Share is intentionally lightweight and does not require building or installing a conventional `.app`.
-
-Under the hood it uses:
-
-- **ScreenCaptureKit** for display and window capture
-- **CoreAudio** for audio capture
-- **PyObjC** for native macOS APIs
-- **WebRTC / aiortc** for real-time streaming
-- **H.264** for video
-- **Opus** for audio
-- **aiohttp** for the local web server
-- **Bonjour / mDNS** for a persistent `.local` address
-- **HTTP Range** for seekable local media playback
-
-The project runs directly from Terminal.
-
-## Requirements
-
-- macOS
-- Python
-- iPhone, Android phone, tablet, laptop, or another device with a modern browser
-- both devices connected to the same local network
-- Screen Recording permission on the Mac
-
-No companion mobile application is required.
-
-## Notes
-
-LAN Share currently operates inside the local network and does not use STUN/TURN servers.
-
-Some browsers, codecs, DRM-protected content, or macOS applications may impose their own capture or playback restrictions.
-
-This project is still evolving, so bug reports, testing on different Macs and mobile devices, and contributions are welcome.
-
----
-
-LAN Share started with a very mundane thought:
-
-**“Why can't I simply open my MacBook screen on my phone?”**
-
-Apparently, the answer was to build it.
+Инициализация оконной системы: [Apple: NSApplication.shared](https://developer.apple.com/documentation/appkit/nsapplication/shared).

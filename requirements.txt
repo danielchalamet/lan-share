@@ -1,0 +1,7 @@
+aiohttp>=3.12,<4
+aiortc>=1.14,<2
+numpy>=2.3,<3
+pyobjc-framework-ScreenCaptureKit>=11,<13
+pyobjc-framework-Quartz>=11,<13
+pyobjc-framework-CoreAudio>=11,<13
+qrcode>=8,<9
