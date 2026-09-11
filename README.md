@@ -1,6 +1,8 @@
 # lan-share
 Stream your Mac screen, windows, system audio and local videos to iPhone, Android or any modern browser over your local network. No mobile app, no cloud, no account. Just run it, scan the QR code and start watching.
 
+<img width="1620" height="979" alt="image" src="https://github.com/user-attachments/assets/4cc25f29-473d-4c7a-8033-9858aa67b8d8" />
+
 
 # LAN Share
 
