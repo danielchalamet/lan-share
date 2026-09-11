@@ -4,6 +4,9 @@ Python + ScreenCaptureKit → H.264 + Opus / WebRTC → Safari на iPhone. Бе
 
 **Окно/экран передаётся со звуком. Для окна захватывается звук его приложения (включая другие окна этого приложения); для экрана — системный звук. Микрофон не захватывается. Видео из файла воспроизводится со звуком и перемоткой, если его кодеки поддерживает Safari.** Это прототип просмотра, без управления мышью, DRM-обхода и автоматического перекодирования файлов.
 
+<img width="1609" height="975" alt="image" src="https://github.com/user-attachments/assets/7f71b407-ae1b-4082-bcab-2a682d73b9c1" />
+<img width="1597" height="971" alt="image" src="https://github.com/user-attachments/assets/88768aed-94d5-4ad8-af07-744f412a2e57" />
+
 ## Запуск
 
 Требуется macOS 14+ и Python 3.11–3.14. Зависимости установлены и проверены здесь на macOS 15.7.9 / Apple Silicon / Python 3.14.7. Swift, Xcode и ffmpeg для запуска не нужны.
